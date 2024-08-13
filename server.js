@@ -31,9 +31,18 @@ db.connect((err) => {
 
 // ------------------ Payments ------------------
 
-// Get all payments
+// Get all payments or filter by payment_method
 app.get("/api/payments", (req, res) => {
-  db.query("SELECT * FROM Payments", (err, results) => {
+  const { payment_method } = req.query;
+  let query = "SELECT * FROM Payments";
+  const queryParams = [];
+
+  if (payment_method) {
+    query += " WHERE payment_method LIKE ?";
+    queryParams.push(`%${payment_method}%`);
+  }
+
+  db.query(query, queryParams, (err, results) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -90,9 +99,33 @@ app.delete("/api/payments/:id", (req, res) => {
 
 // ------------------ Rentals ------------------
 
-// Get all rentals
+// Get all rentals or filter by rental_id, movie_id, or customer_id
 app.get("/api/rentals", (req, res) => {
-  db.query("SELECT * FROM Rentals", (err, results) => {
+  const { rental_id, movie_id, customer_id } = req.query;
+  let query = "SELECT * FROM Rentals";
+  const queryParams = [];
+  let conditions = [];
+
+  if (rental_id) {
+    conditions.push("rental_id = ?");
+    queryParams.push(parseInt(rental_id, 10));
+  }
+
+  if (movie_id) {
+    conditions.push("movie_id = ?");
+    queryParams.push(parseInt(movie_id, 10));
+  }
+
+  if (customer_id) {
+    conditions.push("customer_id = ?");
+    queryParams.push(parseInt(customer_id, 10));
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  db.query(query, queryParams, (err, results) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -149,9 +182,23 @@ app.delete("/api/rentals/:id", (req, res) => {
 
 // ------------------ Movies ------------------
 
-// Get all movies
+// Get all movies or filter by title and/or genre
 app.get("/api/movies", (req, res) => {
-  db.query("SELECT * FROM Movies", (err, results) => {
+  const { title, genre } = req.query;
+  let query = "SELECT * FROM Movies";
+  const queryParams = [];
+
+  if (title) {
+    query += queryParams.length ? " AND title LIKE ?" : " WHERE title LIKE ?";
+    queryParams.push(`%${title}%`);
+  }
+
+  if (genre) {
+    query += queryParams.length ? " AND genre LIKE ?" : " WHERE genre LIKE ?";
+    queryParams.push(`%${genre}%`);
+  }
+
+  db.query(query, queryParams, (err, results) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -208,9 +255,18 @@ app.delete("/api/movies/:id", (req, res) => {
 
 // ------------------ Customers ------------------
 
-// Get all customers
+// Get all customers or filter by customer_name
 app.get("/api/customers", (req, res) => {
-  db.query("SELECT * FROM Customers", (err, results) => {
+  const { customer_name } = req.query;
+  let query = "SELECT * FROM Customers";
+  const queryParams = [];
+
+  if (customer_name) {
+    query += " WHERE customer_name LIKE ?";
+    queryParams.push(`%${customer_name}%`);
+  }
+
+  db.query(query, queryParams, (err, results) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -233,7 +289,7 @@ app.get("/api/customers/:id", (req, res) => {
 app.post("/api/customers", (req, res) => {
   const { customer_name, phone_number, membership_id } = req.body;
   db.query("INSERT INTO Customers (customer_name, phone_number, membership_id) VALUES (?, ?, ?)",
-    [customer_name, phone_number, membership_id], (err, results) => {
+    [customer_name, phone_number, membership_id || null], (err, results) => {
       if (err) {
         return res.status(500).send(err);
       }
@@ -246,7 +302,7 @@ app.put("/api/customers/:id", (req, res) => {
   const customerId = req.params.id;
   const { customer_name, phone_number, membership_id } = req.body;
   db.query("UPDATE Customers SET customer_name = ?, phone_number = ?, membership_id = ? WHERE customer_id = ?",
-    [customer_name, phone_number, membership_id, customerId], (err) => {
+    [customer_name, phone_number, membership_id || null, customerId], (err) => {
       if (err) {
         return res.status(500).send(err);
       }
